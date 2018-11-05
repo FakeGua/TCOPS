@@ -1,0 +1,16 @@
+{
+	"description": "A WePY project",
+	"setting": {
+		"urlCheck": true,
+		"es6": false,
+		"postcss": false,
+		"minified": false,
+		"newFeature": true
+	},
+	"compileType": "miniprogram",
+	"appid": "wxced61e8b4ea7c2d9",
+	"projectname": "tcops",
+	"miniprogramRoot": "dist/",
+	"cloudfunctionRoot": "cloud-functions/",
+	"condition": {}
+}

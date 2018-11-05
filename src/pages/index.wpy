@@ -1,0 +1,258 @@
+<template lang="wxml" minapp="wepy">
+    <!-- 滑动tabbar -->
+    <van-tabs class="van-tabs" type="card" color="#8ec12e" active="{{ active }}" bind:change="onChange">
+        <van-tab title="提交建议">
+            <user></user>
+        </van-tab>
+        <van-tab title="清泉浴室" class="panel-index">
+            <!-- Banner -->
+            <image src="cloud://tcops-348a84.7463-tcops-348a84/默认标题_电子邮件封面_2018.10.03.png" class="banner" />
+            <!-- 折线图 -->
+            <view class="weui-panel">
+                <view class="weui-panel__hd">「 清泉浴室 」人数实时分析</view>
+                <view class="weui-panel__bd">
+                    <view class="weui-media-box weui-media-box_text">
+                        <!-- <view class="weui-media-box__title weui-media-box__title_in-text">标题一</view> -->
+                        <!-- <view >由各种物质组成的巨型球状天体，叫做星球。星球有一定的形状，有自己的运行轨道。</view> -->
+                        <view>
+                            <view class="container">
+                                <ec-canvas id="mychart-dom-bar" canvas-id="mychart-bar" ec="{{ ec }}"></ec-canvas>
+                            </view>
+                        </view>
+                        <view class="weui-media-box__info">
+                            <view class="weui-media-box__info__meta">数据获取时间</view>
+                            <view class="weui-media-box__info__meta weui-media-box__info__meta_extra">{{dataTime.year}} . {{dataTime.month}} . {{dataTime.date}} </view>
+                        </view>
+                    </view>
+                </view>
+            </view>
+            <!-- <form report-submit="true" bindsubmit="onAddRemind">
+                        <view class="weui-cells weui-cells_after-title">
+                            <view class="weui-cell">
+                                <view class="weui-cell__bd">
+                                    <van-stepper name="remindCount" value="{{ remindCount }}" integer min="50" max="1000" step="50" bind:change="onRemindCountChange" />
+                                </view>
+                                <view class="weui-cell__ft" style="font-size:14px">
+                                    <button type="primary" plain form-type="submit" size="mini">少于{{ remindCount }}人时提醒我去洗澡～</button>
+                                </view>
+                            </view>
+                        </view>
+                    </form> -->
+            <form report-submit="true" bindsubmit="onAddRemind">
+                <slider min="50" max="1000" step="50" value="{{remindCount}}" bindchanging="onRemindCountChange" />
+                <button type="primary" plain form-type="submit" size="mini" style="margin:30rpx 30rpx;display:block">少于{{ remindCount }}人时提醒我去洗澡～</button>
+            </form>
+        </van-tab>
+        <van-tab title="关于我们">
+            <about></about>
+        </van-tab>
+    </van-tabs>
+    <!-- 版权部分 -->
+    <view class="weui-footer" style="padding:40rpx">
+        <image style="height:32px;width:32px" src="../lib/logo.png" />
+        <view class="weui-footer__text">2018 Designed By </view>
+        <view class="weui-footer__text">物联网工程专业 | 天津城建大学</view>
+    </view>
+</template>
+
+<style>
+    page {
+        height: 100%;
+    }
+    .van-tabs {
+        height: 100%;
+    }
+    .panel-index .banner {
+        height: 230rpx;
+        width: 690rpx;
+        display: block;
+        margin: 30rpx auto 30rpx auto;
+        border-radius: 5px;
+    }
+    #mychart-dom-bar {
+        height: 480rpx;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+</style>
+
+<script>
+    import wepy from 'wepy';
+    import * as echarts from '../lib/ec-canvas/echarts.common.min';
+    import About from './about';
+    import User from './user';
+    wx.cloud.init(); //初始化云函数
+    wx.showShareMenu(); //转发函数
+    /**
+     * Page设置
+     */
+    export default class Index extends wepy.page {
+        config = {
+            "usingComponents": {
+                "van-tab": "../lib/vant-weapp/tab/index",
+                "van-tabs": "../lib/vant-weapp/tabs/index",
+                "van-button": "../lib/vant-weapp/button/index",
+                "ec-canvas": "../lib/ec-canvas/ec-canvas",
+                "van-stepper": "../lib/vant-weapp/stepper/index"
+            }
+        };
+        components = {
+            about: About,
+            user: User
+        };
+        data = {
+            active: 1,
+            ec: {
+                lazyLoad: true // 将 lazyLoad 设为 true 后，需要手动初始化图表
+            },
+            chartData: {
+                x: [],
+                y: []
+            },
+            dataTime: {
+                year: '2018',
+                month: '8',
+                date: '8'
+            },
+            remindCount: 200
+        };
+        onChange(event) {
+            // wx.showToast({
+            //     title: `切换到标签 ${event.detail.index + 1}`,
+            //     icon: 'none'
+            // });
+        };
+        onLoad() {
+            wx.showLoading({
+                title: '请稍候~',
+                mask: true
+            });
+            /**
+             * 懒加载echarts
+             */
+            this.ecComponent = this.$wxpage.selectComponent('#mychart-dom-bar'); // 获取组件
+            this.ecComponent.init((canvas, width, height) => {
+                // 获取组件的 canvas、width、height 后的回调函数
+                // 在这里初始化图表
+                const chart = echarts.init(canvas, null, {
+                    width: width,
+                    height: height
+                });
+                this.setOption(chart);
+                // 将图表实例绑定到 this 上，可以在其他成员函数（如 dispose）中访问
+                this.chart = chart;
+                chart.showLoading({
+                    text: '加载中',
+                    color: '#8ec12e',
+                    textColor: '#000',
+                    maskColor: 'rgba(255, 255, 255, 0.8)',
+                    zlevel: 0
+                });
+                wx.hideLoading();
+                // 注意这里一定要返回 chart 实例，否则会影响事件处理等
+                return chart;
+            });
+            /**
+             * 调用云函数获取数据库数据
+             */
+            wx.cloud.callFunction({
+                name: 'getData',
+                data: {},
+                success: res => {
+                    // console.log(res);
+                    for (let i = 0; i < res.result.length; i++) {
+                        let t = new Date(res.result[i].send_time);
+                        this.chartData.x.unshift(`${t.getUTCHours()}:${t.getUTCMinutes()}`);
+                        this.chartData.y.unshift(res.result[i].sensor_data);
+                        this.$apply();
+                        if (i == 0) {
+                            this.dataTime.year = t.getUTCFullYear();
+                            this.dataTime.month = t.getUTCMonth() + 1;
+                            this.dataTime.date = t.getUTCDate();
+                            this.$apply();
+                        }
+                    }
+                    this.chart.setOption({
+                        xAxis: {
+                            data: this.chartData.x
+                        },
+                        series: [{
+                            name: '人数',
+                            data: this.chartData.y
+                        }]
+                    });
+                    this.chart.hideLoading();
+                },
+                fail: err => {
+                    // this.chart.hideLoading();
+                    wx.showToast({
+                        title: '网络错误',
+                        icon: 'none'
+                    });
+                    console.log(err);
+                }
+            })
+        };
+        setOption(chart) {
+            const option = {
+                title: {
+                    text: ''
+                },
+                tooltip: {},
+                legend: {
+                    data: ['人数']
+                },
+                xAxis: {
+                    data: ['12:00', '12:30', '13:00', '13:30', '14:00']
+                },
+                yAxis: {},
+                label: {
+                    show: true
+                },
+                series: [{
+                    name: '人数',
+                    type: 'line',
+                    data: [50, 40, 50, 20, 10],
+                    smooth: true
+                }],
+                color: '#8ec12e'
+            };
+            chart.setOption(option);
+        };
+        methods = {
+            onRemindCountChange(e) {
+                this.remindCount = e.detail.value;
+            },
+            onAddRemind(e) {
+                wx.showLoading({
+                    title: '正在提交',
+                    mask: true
+                })
+                wx.cloud.callFunction({
+                    name: 'addRemind',
+                    data: {
+                        remindCount: this.remindCount,
+                        formID: e.detail.formId
+                    },
+                    success: res => {
+                        wx.hideLoading();
+                        wx.showToast({
+                            title: `${res.result.msg}`,
+                            icon: 'none'
+                        })
+                    },
+                    fail: err => {
+                        console.log(err);
+                        wx.hideLoading();
+                        wx.showToast({
+                            title: '网络错误',
+                            icon: 'none'
+                        });
+                    }
+                })
+            }
+        };
+    }
+</script>
+

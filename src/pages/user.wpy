@@ -1,0 +1,127 @@
+<template lang="wxml" minapp="wepy">
+    <view class="header">
+        <image src="../lib/user.svg" />
+    </view>
+    <!-- <view class="weui-cells__title"></view> -->
+    <view class="advice weui-cells weui-cells_after-title">
+        <view class="weui-cell">
+            <view class="weui-cell__bd">
+                <textarea class="weui-textarea" placeholder="我们诚挚地邀请你提供意见或建议～" style="height: 6.6em" bindblur="getAdvice" bindinput="getAdviceWords" adjust-position="true" />
+                <view class="weui-textarea-counter">{{adviceWords}}/140</view>
+            </view>
+        </view>
+    </view>
+    <view class="login">
+        <van-button type="primary" plain class="login_btn" size="large" open-type="getUserInfo" bind:getuserinfo="onLogin">提交给开发者</van-button>
+    </view>
+</template>
+
+<style scoped>
+    .header {
+        text-align: center;
+        color: gray;
+    }
+    .header image {
+        width: 128px;
+        height: 128px;
+        display: block;
+        margin: 80rpx auto 80rpx auto;
+    }
+    .login .login_btn {
+        display: block;
+        margin: 60rpx 60rpx 0 60rpx;
+        text-align: center;
+    }
+</style>
+
+<script>
+    import wepy from 'wepy';
+    wx.cloud.init(); //初始化云函数
+    const db = wx.cloud.database();
+    /**
+     * Component设置
+     */
+    export default class User extends wepy.component {
+        config = {
+            "usingComponents": {
+                "van-button": "../lib/vant-weapp/button/index",
+            }
+        };
+        //添加数据
+        addAdvice(e,t) {
+            if (this.adviceWords > 0) {
+                db.collection('tcops_advices').add({
+                    data: {
+                        userInfo: e.detail.userInfo,
+                        advice: this.advice,
+                        addTime: t.getTime()
+                    },
+                    success: function (res) {
+                        console.log(res);
+                        wx.hideLoading();
+                        wx.showToast({
+                            title: '提交成功',
+                            icon: 'success',
+                            duration: 1000,
+                            mask: true
+                        })
+                    },
+                    fail: err => {
+                        console.error(err);
+                    }
+                });
+            } else {
+                wx.showToast({
+                    title: '写些什么吧～',
+                    icon: 'none',
+                    duration: 1000,
+                    mask: true
+                })
+            }
+        };
+        methods = {
+            onLogin(e) {
+                let t = new Date;
+                wx.showLoading({
+                    title: '正在提交',
+                    mask: true
+                });
+                //取数据库数据判断是否重复
+                db.collection('tcops_advices').where({
+                    'userInfo.nickName': e.detail.userInfo.nickName
+                }).get({
+                    success: res => {
+                        if (res.data.length != 0) {
+                            if ((t.getTime() - res.data[res.data.length-1].addTime) < (1000 * 60)) {
+                                wx.showToast({
+                                    title: '一分钟后再试',
+                                    icon: 'none',
+                                    duration: 1000,
+                                    mask: true
+                                })
+                            } else {
+                                this.addAdvice(e,t);
+                            }
+                        } else if (res.data.length == 0) {
+                            this.addAdvice(e,t);
+                        }
+                    },
+                    fail: err => {
+                        console.error(err);
+                    }
+                })
+            },
+            getAdvice(e) {
+                this.advice = e.detail.value;
+            },
+            getAdviceWords(e) {
+                this.adviceWords = e.detail.value.length;
+            }
+        };
+        data = {
+            adviceWords: 0,
+            advice: ''
+        }
+    }
+</script>
+
