@@ -46,9 +46,9 @@ exports.main = async (event, context) => {
   return new Promise((resolve, reject) => {
     let db = mysql.createConnection({
       host: '139.219.13.39',
-      user: 'root',
-      password: '12345687',
-      database: 'TCOPS'
+      user: '',
+      password: '',
+      database: ''
     });
     db.connect(err => {
       if (err) {
